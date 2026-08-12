@@ -22,7 +22,7 @@ from pathlib import Path
 
 def extract_pdf(file_path: str) -> list[dict]:
     """Extract text from a PDF, page by page, using PyMuPDF (fitz)."""
-    import fitz  # PyMuPDF
+    import pymupdf as fitz  # PyMuPDF — `import fitz` directly is deprecated
 
     doc = fitz.open(file_path)
     source = Path(file_path).name
