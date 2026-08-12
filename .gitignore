@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local data / vector store (do not commit uploaded test docs or embeddings)
+data/uploads/
+data/chroma_db/
+*.chroma
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS
+.DS_Store

@@ -1,0 +1,17 @@
+# --- UI ---
+streamlit>=1.37
+
+# --- Document extraction ---
+PyMuPDF>=1.24        # PDF text + page-level extraction (imported as `fitz`)
+python-docx>=1.1     # DOCX extraction
+
+# --- Chunking / embeddings / vector store ---
+sentence-transformers>=3.0   # local embedding model (all-MiniLM-L6-v2)
+chromadb>=0.5                # local persistent vector store
+tiktoken>=0.7                # token counting for chunk sizing
+
+# --- LLM generation ---
+anthropic>=0.34       # Claude API client
+
+# --- Utilities ---
+python-dotenv>=1.0    # load API key from .env, keep it out of git
