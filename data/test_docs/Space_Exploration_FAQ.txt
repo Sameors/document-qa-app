@@ -1,0 +1,22 @@
+Frequently Asked Questions: Space Exploration Basics
+
+Q: What is the difference between a satellite and a space probe?
+A: A satellite orbits a celestial body, most commonly Earth, and typically remains within that orbit for its operational life. A space probe, by contrast, is designed to travel beyond a single orbit, often visiting multiple bodies in the solar system or leaving it entirely, as with the Voyager spacecraft.
+
+Q: Why do rockets need multiple stages?
+A: Multi-stage rockets shed weight during ascent by discarding empty fuel tanks and engines once they are no longer needed. Carrying less dead weight allows the remaining stages to reach higher velocities with the fuel that remains, which is essential for achieving the speed required to reach orbit, roughly 28,000 kilometers per hour for low Earth orbit.
+
+Q: What is the Karman line?
+A: The Karman line, set at an altitude of 100 kilometers above sea level, is the internationally recognized boundary between Earth's atmosphere and outer space. Above this altitude, a vehicle would need to travel faster than orbital velocity for aerodynamic lift to support it, making conventional aircraft flight impractical.
+
+Q: How long does it take to reach Mars?
+A: Travel time depends on the alignment of Earth and Mars at launch, but most missions using current propulsion technology take between six and nine months. Missions are typically timed around a launch window that opens roughly every 26 months, when the two planets are positioned to minimize the distance and fuel required for the transfer.
+
+Q: What keeps astronauts in orbit from falling back to Earth?
+A: Astronauts in orbit are not free of gravity; rather, they are in a continuous state of free fall around the Earth. Their spacecraft is traveling fast enough sideways that the curve of its fall matches the curvature of the Earth, so it continually falls toward the planet without ever getting closer to the surface. This is what produces the sensation of weightlessness.
+
+Q: What is the purpose of the International Space Station?
+A: The International Space Station serves as a microgravity research laboratory, allowing scientists to study the effects of long-duration spaceflight on human physiology, test technologies for future deep-space missions, and conduct experiments in materials science and biology that are difficult or impossible to replicate under Earth's gravity.
+
+Q: Why do some launches get delayed for weather?
+A: Rockets are highly sensitive to conditions such as high winds, lightning risk, and cloud cover, since electrically charged clouds can trigger a lightning strike along the rocket's exhaust plume even under otherwise clear skies. Mission teams follow strict weather criteria and will delay a launch rather than risk a vehicle and crew to marginal conditions.

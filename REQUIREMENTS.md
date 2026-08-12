@@ -19,7 +19,8 @@ information is not present in the document, rather than hallucinating.
 
 ### Explicitly out of scope (v1)
 - OCR / scanned or image-based PDFs
-- Reliable table extraction (tables may be mangled — documented as a known limitation)
+- DOCX table extraction (PDF tables ARE in scope as of FR10 below — DOCX
+  table support is a real gap, flagged as a follow-up, not silently dropped)
 - Multi-document / cross-document Q&A
 - User authentication or multi-user persistence
 
@@ -36,6 +37,7 @@ information is not present in the document, rather than hallucinating.
 | FR7 | Refuse when unanswerable | On questions with no answer in doc, model responds with the fixed refusal string ≥90% of the time (measured in eval set, Step 7) |
 | FR8 | Show citations | Every non-refused answer displays the exact source chunk + page/paragraph number |
 | FR9 | Multi-turn context | Follow-up questions referencing prior turns are answered correctly on at least 3 manual test cases |
+| FR10 | PDF table extraction | Tables in PDFs are detected via `pdfplumber` and converted to Markdown, preserving header/value (row/column) association. Verified against a real bank-statement-style test document — see Section 9 for the evidence that motivated this requirement. Table chunks are never split mid-table by the chunking layer. |
 
 ## 4. Non-Functional Requirements
 
@@ -89,6 +91,26 @@ app/streamlit_app.py → answer + expandable sources panel
 
 ## 8. Known Limitations (to state explicitly in README)
 - No OCR — scanned/image PDFs will extract as empty or garbled text
-- Table structure is not reliably preserved
+- DOCX tables are not extracted at all (python-docx's paragraph API skips
+  table content entirely) — a real gap, not yet fixed
+- Complex PDF tables (merged cells, nested tables, multi-line cell wraps)
+  may still extract imperfectly — pdfplumber handles simple/common table
+  layouts reliably, not every layout
 - Single document per session only
 - Local-only in v1 (deployment is a later milestone)
+
+## 9. Evidence Log
+
+**FR10 motivation (PDF table extraction):** Initial Step 2 testing used
+5 documents that were all clean, single-column, table-free text — a
+selection bias that produced a false-positive "extraction works" signal.
+Retesting with a bank-statement-style PDF containing an "Account Summary"
+table exposed the real failure: PyMuPDF's flat text extraction separated
+table headers ("Beginning Balance", "Total Deposits"...) from their
+values ("$4,812.55", "$6,240.00"...) into two disconnected text runs,
+making it impossible to reliably determine which value belonged to
+which label. Since financial/structured documents are a core target
+use case for this project (not a peripheral one), this was reclassified
+from an accepted limitation to a functional requirement (FR10) and
+fixed via pdfplumber-based table detection + Markdown conversion,
+verified against a synthetic reproduction of the same table structure.

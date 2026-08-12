@@ -7,13 +7,22 @@ silently break — verify output by reading 10-15 chunks yourself before
 moving to embedding.py.
 
 Contract:
-    Input:  list[dict] from extraction.py — {"text", "page_num", "source"}
+    Input:  list[dict] from extraction.py — {"text", "page_num", "source", "is_table"}
     Output: list[dict] — {
         "chunk_text": str,
         "page_num": int,
         "source": str,
         "chunk_id": str,       # unique id, e.g. f"{source}_p{page_num}_c{i}"
+        "is_table": bool,      # carried through so retrieval/generation can
+                                #   know the source shape if needed later
     }
+
+CRITICAL: is_table=True blocks are NEVER split by token-count chunking,
+even if they exceed chunk_size. Splitting a Markdown table mid-row
+re-introduces the exact header/value separation bug that table
+extraction was built to fix (REQUIREMENTS.md FR10). A large table
+becomes one large chunk instead — acceptable for v1; revisit only if
+you hit tables large enough to blow the LLM's context window.
 """
 
 CHUNK_SIZE_TOKENS = 500
@@ -24,17 +33,27 @@ def chunk_blocks(blocks: list[dict], chunk_size: int = CHUNK_SIZE_TOKENS,
                   overlap: int = CHUNK_OVERLAP_TOKENS) -> list[dict]:
     """Fixed-size token chunking with overlap, per extracted block.
 
-    NOTE: this is the fallback strategy. Before relying on it, decide
-    (per REQUIREMENTS.md) whether you're implementing structural
-    chunking (split by heading/paragraph boundary) first and only
-    falling back to fixed-size for blocks without clear structure.
-    """
-    import tiktoken
+    Table blocks (is_table=True) bypass splitting entirely and become
+    a single atomic chunk, regardless of size.
 
-    enc = tiktoken.get_encoding("cl100k_base")
+    NOTE: for prose, this is the fallback strategy. Before relying on
+    it fully, decide (per REQUIREMENTS.md) whether you're implementing
+    structural chunking (split by heading/paragraph boundary) first and
+    only falling back to fixed-size for blocks without clear structure.
+    """
+    enc = None  # lazy-loaded — only needed if a non-table block requires splitting
     chunks = []
 
     for block in blocks:
+        if block.get("is_table"):
+            # atomic — never split a table mid-row
+            chunks.append(_make_chunk(block["text"], block, len(chunks)))
+            continue
+
+        if enc is None:
+            import tiktoken
+            enc = tiktoken.get_encoding("cl100k_base")
+
         tokens = enc.encode(block["text"])
         if len(tokens) <= chunk_size:
             chunks.append(_make_chunk(block["text"], block, len(chunks)))
@@ -58,4 +77,5 @@ def _make_chunk(text: str, block: dict, idx: int) -> dict:
         "page_num": block["page_num"],
         "source": block["source"],
         "chunk_id": f"{block['source']}_p{block['page_num']}_c{idx}",
+        "is_table": block.get("is_table", False),
     }
