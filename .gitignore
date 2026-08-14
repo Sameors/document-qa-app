@@ -11,6 +11,7 @@ venv/
 data/uploads/
 data/chroma_db/
 *.chroma
+learn/
 
 # Streamlit
 .streamlit/secrets.toml
