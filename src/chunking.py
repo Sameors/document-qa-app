@@ -12,7 +12,11 @@ Contract:
         "chunk_text": str,
         "page_num": int,
         "source": str,
-        "chunk_id": str,       # unique id, e.g. f"{source}_p{page_num}_c{i}"
+        "chunk_id": str,       # globally unique across the WHOLE document —
+                                #   assigned in a second pass over every chunk,
+                                #   after all blocks are processed (see
+                                #   chunk_blocks below). A per-block-only index
+                                #   collided when multiple tables shared one page.
         "is_table": bool,      # carried through so retrieval/generation can
                                 #   know the source shape if needed later
     }
@@ -23,59 +27,74 @@ re-introduces the exact header/value separation bug that table
 extraction was built to fix (REQUIREMENTS.md FR10). A large table
 becomes one large chunk instead — acceptable for v1; revisit only if
 you hit tables large enough to blow the LLM's context window.
+
+Decomposed into three functions, each independently testable:
+    split_into_chunks(text, ...) -> fixed-size token splitting w/ overlap,
+                                     used only for prose
+    chunk_block(block, ...)      -> one block -> list of chunk dicts
+                                     (always a list, even for tables)
+    chunk_blocks(blocks, ...)    -> the full block list -> flattened,
+                                     globally-unique-ID chunk list
 """
+
+import tiktoken
 
 CHUNK_SIZE_TOKENS = 500
 CHUNK_OVERLAP_TOKENS = 50
 
 
+def split_into_chunks(text: str, chunk_size: int, overlap: int = 0) -> list[str]:
+    """Split text into chunks of at most chunk_size tokens, with overlap."""
+    enc = tiktoken.get_encoding("cl100k_base")
+    token_ids = enc.encode(text)
+    result_list = []
+    for start in range(0, len(token_ids), chunk_size - overlap):
+        end = start + chunk_size
+        result_list.append(enc.decode(token_ids[start:end]))
+    return result_list
+
+
+def chunk_block(block: dict, chunk_size: int, overlap: int) -> list[dict]:
+    """Turn one extracted block into one or more chunk dicts.
+
+    Table blocks are never split — always returned as a single,
+    unsplit chunk, regardless of chunk_size, to protect table
+    structure (see REQUIREMENTS.md, the header/value separation bug).
+    """
+    if block['is_table']:
+        chunk_id = f"{block['source']}_p{block['page_num']}_table"
+        return [{
+            'chunk_text': block['text'],
+            'page_num': block['page_num'],
+            'source': block['source'],
+            'is_table': block['is_table'],
+            'chunk_id': chunk_id
+        }]
+    else:
+        prose_chunk = []
+        chunks = split_into_chunks(text=block["text"], chunk_size=chunk_size, overlap=overlap)
+        for i, chunk in enumerate(chunks):
+            single_prose = {"chunk_text": chunk,
+                             "page_num": block['page_num'],
+                             "source": block['source'],
+                             "is_table": block['is_table'],
+                             "chunk_id": f"{block['source']}_p{block['page_num']}_prose"}
+            prose_chunk.append(single_prose)
+    return prose_chunk
+
+
 def chunk_blocks(blocks: list[dict], chunk_size: int = CHUNK_SIZE_TOKENS,
                   overlap: int = CHUNK_OVERLAP_TOKENS) -> list[dict]:
-    """Fixed-size token chunking with overlap, per extracted block.
-
-    Table blocks (is_table=True) bypass splitting entirely and become
-    a single atomic chunk, regardless of size.
-
-    NOTE: for prose, this is the fallback strategy. Before relying on
-    it fully, decide (per REQUIREMENTS.md) whether you're implementing
-    structural chunking (split by heading/paragraph boundary) first and
-    only falling back to fixed-size for blocks without clear structure.
+    """Flatten every block's chunks into one list, then assign each
+    chunk a globally unique ID based on its final position — fixes a
+    real collision found in testing when multiple tables shared a page.
     """
-    enc = None  # lazy-loaded — only needed if a non-table block requires splitting
-    chunks = []
-
+    all_chunks = []
     for block in blocks:
-        if block.get("is_table"):
-            # atomic — never split a table mid-row
-            chunks.append(_make_chunk(block["text"], block, len(chunks)))
-            continue
+        one_chunk = chunk_block(block=block, chunk_size=chunk_size, overlap=overlap)
+        all_chunks.extend(one_chunk)
 
-        if enc is None:
-            import tiktoken
-            enc = tiktoken.get_encoding("cl100k_base")
+    for i, chunk in enumerate(all_chunks):
+        chunk['chunk_id'] = f"{chunk['chunk_id']}{i}"
 
-        tokens = enc.encode(block["text"])
-        if len(tokens) <= chunk_size:
-            chunks.append(_make_chunk(block["text"], block, len(chunks)))
-            continue
-
-        start = 0
-        while start < len(tokens):
-            end = min(start + chunk_size, len(tokens))
-            chunk_text = enc.decode(tokens[start:end])
-            chunks.append(_make_chunk(chunk_text, block, len(chunks)))
-            if end == len(tokens):
-                break
-            start = end - overlap  # step forward, keep overlap
-
-    return chunks
-
-
-def _make_chunk(text: str, block: dict, idx: int) -> dict:
-    return {
-        "chunk_text": text.strip(),
-        "page_num": block["page_num"],
-        "source": block["source"],
-        "chunk_id": f"{block['source']}_p{block['page_num']}_c{idx}",
-        "is_table": block.get("is_table", False),
-    }
+    return all_chunks
