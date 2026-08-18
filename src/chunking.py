@@ -37,9 +37,6 @@ Decomposed into three functions, each independently testable:
                                      globally-unique-ID chunk list
 """
 
-from sentence_transformers import SentenceTransformer
-model = SentenceTransformer("all-MiniLM-L6-v2")
-tokenizer = model.tokenizer
 
 CHUNK_SIZE_TOKENS = 200
 CHUNK_OVERLAP_TOKENS = 20
@@ -65,7 +62,7 @@ def chunk_block(block: dict, tokenizer, chunk_size: int, overlap: int) -> list[d
     """
     if block['is_table']:
         chunk_id = f"{block['source']}_p{block['page_num']}_table"
-        block_tokens = model.tokenizer(block['text'])["input_ids"]
+        block_tokens = tokenizer(block['text'])["input_ids"]
 
         if (len(block_tokens)) < CHUNK_SIZE_TOKENS:
             return [{
@@ -141,7 +138,7 @@ def split_table_by_rows(table_text: str, tokenizer, chunk_size: int) -> list[str
     
 pass
 
-def chunk_blocks(blocks: list[dict], chunk_size: int = CHUNK_SIZE_TOKENS,
+def chunk_blocks(blocks: list[dict], tokenizer,chunk_size: int = CHUNK_SIZE_TOKENS,
                   overlap: int = CHUNK_OVERLAP_TOKENS) -> list[dict]:
     """Flatten every block's chunks into one list, then assign each
     chunk a globally unique ID based on its final position — fixes a
