@@ -9,44 +9,58 @@ script that embeds a test doc and manually checks that similarity
 search on 5 known questions returns the chunks you'd expect.
 """
 
-import chromadb
 from sentence_transformers import SentenceTransformer
 
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-CHROMA_PERSIST_DIR = "data/chroma_db"
-
-_model = None
-
-
-def get_embedding_model() -> SentenceTransformer:
-    """Lazy-load the embedding model once per process (it's ~90MB)."""
-    global _model
-    if _model is None:
-        _model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-    return _model
+def load_model(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
+    
+    """Load and return a SentenceTransformer model.
+        """
+        
+    model = SentenceTransformer(model_name)
+    return model
 
 
-def get_chroma_client() -> chromadb.PersistentClient:
-    return chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
-
-
-def embed_and_store(chunks: list[dict], collection_name: str) -> None:
-    """Embed all chunks and upsert into a named ChromaDB collection.
-
-    collection_name should be unique per uploaded document/session,
-    e.g. a hash of the filename + upload timestamp, so re-uploading
-    a doc doesn't collide with a previous session's collection.
+def validate_chunk_length(text: str, tokenizer, max_tokens: int = 256) -> int:
     """
-    model = get_embedding_model()
-    client = get_chroma_client()
-    collection = client.get_or_create_collection(collection_name)
+    Check the TRUE token count of `text` as the embedding model will
+    actually see it at encode time.
+    """
+    token_ids = tokenizer(text)["input_ids"]  
+    return len(token_ids)
 
-    texts = [c["chunk_text"] for c in chunks]
-    embeddings = model.encode(texts, show_progress_bar=False).tolist()
 
-    collection.upsert(
-        ids=[c["chunk_id"] for c in chunks],
-        embeddings=embeddings,
-        documents=texts,
-        metadatas=[{"page_num": c["page_num"], "source": c["source"]} for c in chunks],
-    )
+def embed_chunks(chunks: list[dict], model: SentenceTransformer) -> list[dict]:
+    
+    """
+        Input: list of chunk dicts (each with at least a 'chunk_text' field
+        and metadata like 'chunk_id', 'page_num', 'source', 'is_table').
+    
+        Output: the SAME chunk dicts, each with a new 'embedding' field added
+        — NOT a bare list of vectors. Keeps vector + metadata bound together.
+        """
+    chunk_text_list=[]
+    for chunk in chunks:
+        chunk_length= validate_chunk_length(text=chunk['chunk_text'], tokenizer= model.tokenizer)
+        if chunk_length > model.max_seq_length:
+            print(f"chunk_length({chunk_length}) is greater than allowed size {model.max_seq_length}")
+        chunk_text_list.append( chunk['chunk_text'])
+    
+    embeddings = model.encode(chunk_text_list, normalize_embeddings=True, batch_size=32)
+    for chunk, embedding in zip(chunks, embeddings):
+        chunk['embedding'] = embedding
+    return chunks
+        
+    
+def embed_query(query: str, model: SentenceTransformer):
+    
+    """
+    Embed a single user query string — called at RETRIEVAL time, not
+    indexing time. Lives here (not in retrieval.py) because it's still
+    fundamentally "text -> vector via this model" 
+    """
+    query_length= model.tokenizer(query)["input_ids"]  
+    if query_length > model.max_seq_length:
+        print(f"chunk_length({query_length}) is greater than allowed size {model.max_seq_length}")
+    query_embeddings = model.encode(query, normalize_embeddings=True)
+    return query_embeddings
+    
