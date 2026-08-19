@@ -58,8 +58,8 @@ def embed_query(query: str, model: SentenceTransformer):
     indexing time. Lives here (not in retrieval.py) because it's still
     fundamentally "text -> vector via this model" 
     """
-    query_length= model.tokenizer(query)["input_ids"]  
-    if query_length > model.max_seq_length:
+    query_length= len(model.tokenizer(query)["input_ids"])
+    if (query_length) > model.max_seq_length:
         print(f"chunk_length({query_length}) is greater than allowed size {model.max_seq_length}")
     query_embeddings = model.encode(query, normalize_embeddings=True)
     return query_embeddings
