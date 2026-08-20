@@ -46,11 +46,27 @@ def split_into_chunks(text: str, tokenizer ,chunk_size: int, overlap: int = 0) -
     """Split text into chunks of at most chunk_size tokens, with overlap."""
     # enc = tiktoken.get_encoding("cl100k_base")
     token_ids = tokenizer(text, add_special_tokens=False)["input_ids"]
+    #print(f'text is - {text} , chunksize - {chunk_size}')
+    
     result_list = []
     for start in range(0, len(token_ids), chunk_size - overlap):
-        end = start + chunk_size
-        result_list.append(tokenizer.decode(token_ids[start:end]))
+            end = start + chunk_size
+            if start <= 0 or start < (len(token_ids) - overlap) or len(token_ids) < overlap :
+                #print (f'start - {start} , end - {end} , tokenid_Len - {len(token_ids)}')
+                result_list.append(tokenizer.decode(token_ids[start:end]))
+                #print(f'Result_List - {result_list}'+ "\n")
+            else:
+                break
     return result_list
+    
+    
+    # for start in range(0, len(token_ids), chunk_size - overlap):
+    #     end = start + chunk_size
+    #     print (f'start - {start} , end - {end} , tokenid_Len - {len(token_ids)}')
+    #     result_list.append(tokenizer.decode(token_ids[start:end]))
+    #     print(f'Result_List - {result_list}'+ "\n")
+    # return result_list
+
 
 
 def chunk_block(block: dict, tokenizer, chunk_size: int, overlap: int) -> list[dict]:

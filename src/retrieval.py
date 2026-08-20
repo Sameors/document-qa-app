@@ -33,6 +33,7 @@ def store_chunks(chunks: list[dict], client: chromadb.PersistentClient) -> None:
                         'is_table': chunk['is_table']}
                         )
     collection_name = get_collection_name(chunks[0]["source"])
+    client.delete_collection(name=collection_name)
     collection = client.get_or_create_collection(
         name=collection_name,
         configuration={"hnsw": {"space": "cosine"}})
