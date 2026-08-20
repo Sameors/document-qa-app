@@ -11,6 +11,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.extraction import extract
 from src.chunking import chunk_blocks
 
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer("all-MiniLM-L6-v2")
+tokenizer = model.tokenizer
+
 TEST_DOCS_DIR = Path(__file__).resolve().parent.parent / "data" / "test_docs"
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 
@@ -30,13 +34,20 @@ def summarize(chunks: list[dict], file_path: Path) -> None:
 
 
 def main() -> None:
-    files = [f for f in TEST_DOCS_DIR.iterdir()
-             if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
+    
+    TEST_DOCS_DIR = Path(__file__).resolve().parent.parent / "data" / "test_docs"/"Blank_Page_Then_Table.pdf"
+    blocks = extract(str(TEST_DOCS_DIR))
+    chunks = chunk_blocks(blocks,tokenizer)
+    summarize(chunks=chunks,file_path=TEST_DOCS_DIR)
+    
+    # files = [f for f in TEST_DOCS_DIR.iterdir()
+    #          if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
 
-    for file_path in sorted(files):
-         blocks = extract(str(file_path))
-         chunks = chunk_blocks(blocks)
-         summarize(chunks=chunks,file_path=file_path)
+    # for file_path in sorted(files):
+    #      blocks = extract(str(file_path))
+    #      chunks = chunk_blocks(blocks,tokenizer)
+    #      #print(chunks)
+    #      summarize(chunks=chunks,file_path=file_path)
       
     pass
 
