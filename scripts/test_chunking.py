@@ -23,7 +23,8 @@ def summarize(chunks: list[dict], file_path: Path) -> None:
     set_id = []
     print(f"chunk-count - {len(chunks)}")
     for chunk in chunks:
-        print(f"chunk-id - {chunk["chunk_id"]} ,is-table - {chunk["is_table"]} ,page_num - {chunk["page_num"]} ")
+        print(f"chunk-id - {chunk["chunk_id"]} ,is-table - {chunk["is_table"]} ,page_num - {chunk["page_num"]}")
+        #print(f"Text - {chunk["chunk_text"]}")
         set_id.append(chunk["chunk_id"])
     if len(set_id)== len(chunks):
         print(f"chunks are matched")
@@ -35,7 +36,7 @@ def summarize(chunks: list[dict], file_path: Path) -> None:
 
 def main() -> None:
     
-    TEST_DOCS_DIR = Path(__file__).resolve().parent.parent / "data" / "test_docs"/"Blank_Page_Then_Table.pdf"
+    TEST_DOCS_DIR = Path(__file__).resolve().parent.parent / "data" / "test_docs"/"Monarch_Butterfly_Migration.pdf"
     blocks = extract(str(TEST_DOCS_DIR))
     chunks = chunk_blocks(blocks,tokenizer)
     summarize(chunks=chunks,file_path=TEST_DOCS_DIR)

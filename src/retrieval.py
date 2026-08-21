@@ -15,7 +15,7 @@ def get_chroma_client(persist_dir: str = "data/chroma_db") -> chromadb.Persisten
     return chromadb.PersistentClient(path= persist_dir)
 
 
-def store_chunks(chunks: list[dict], client: chromadb.PersistentClient) -> None:
+def store_chunks(chunks: list[dict], client: chromadb.PersistentClient, collection_name: str) -> None:
     """
     Store embedded chunks (output of embed_chunks()) into a per-document
     ChromaDB collection.
@@ -32,8 +32,11 @@ def store_chunks(chunks: list[dict], client: chromadb.PersistentClient) -> None:
                         'source': chunk['source'],
                         'is_table': chunk['is_table']}
                         )
-    collection_name = get_collection_name(chunks[0]["source"])
-    client.delete_collection(name=collection_name)
+    #collection_name = get_collection_name(chunks[0]["source"])
+    try:
+        client.delete_collection(name=collection_name)
+    except Exception:
+        pass
     collection = client.get_or_create_collection(
         name=collection_name,
         configuration={"hnsw": {"space": "cosine"}})
@@ -47,15 +50,15 @@ def store_chunks(chunks: list[dict], client: chromadb.PersistentClient) -> None:
     
 
 def query_chunks(query: str, model, client: chromadb.PersistentClient,
-                  source: str, n_results: int = 5) -> list[dict]:
+                  collection_name: str, n_results: int = 5) -> list[dict]:
     """
-    Given a user's question and a document's source filename, return
+    Given a user's question and a document's collection name, return
     the top-k most relevant chunks from that document's collection.
     """
     
     query_embedding = embed_query(query, model)
-    query_name = get_collection_name(source)
-    collection = client.get_collection(name = query_name)
+    #query_name = get_collection_name(source)
+    collection = client.get_collection(name = collection_name)
     results = collection.query(
         query_embeddings= [query_embedding],
         n_results= n_results,
@@ -73,18 +76,34 @@ def query_chunks(query: str, model, client: chromadb.PersistentClient,
             })
     return matched_chunks
     
-def get_collection_name(source: str) -> str:
+# def get_collection_name(source: str) -> str:
+    
+#     """
+#     Generate a valid, deterministic ChromaDB collection name from a
+#     source filename.
+#     """
+#     name_without_ext = re.sub(r'\.[^.]+$', '', source)
+#     safe_ext = (re.search(r'\.[^.]+$', source)).group(0)
+#     cleaned_prefix_text = re.sub(r'\W', '_', name_without_ext)
+#     if cleaned_prefix_text.startswith('_') or not cleaned_prefix_text:
+#         cleaned_prefix_text = safe_ext[1:] + cleaned_prefix_text
+#     max_prefix_length = MAX_COLLECTION_NAME_LENGTH - (HASH_LENGTH + SEPARATOR_LENGTH) - 1
+#     collection_prefix = cleaned_prefix_text.lower()[:max_prefix_length]
+#     full_hash = hashlib.sha256(source.encode('utf-8')).hexdigest()
+#     return f"{collection_prefix}_{full_hash[:HASH_LENGTH]}"
+
+def get_collection_name(filename: str , file_bytes: bytes) -> str:
     
     """
     Generate a valid, deterministic ChromaDB collection name from a
-    source filename.
+    source filename; uniqueness is derived from file content (hash)
     """
-    name_without_ext = re.sub(r'\.[^.]+$', '', source)
-    safe_ext = (re.search(r'\.[^.]+$', source)).group(0)
+    name_without_ext = re.sub(r'\.[^.]+$', '', filename)
+    safe_ext = (re.search(r'\.[^.]+$', filename)).group(0)
     cleaned_prefix_text = re.sub(r'\W', '_', name_without_ext)
     if cleaned_prefix_text.startswith('_') or not cleaned_prefix_text:
         cleaned_prefix_text = safe_ext[1:] + cleaned_prefix_text
     max_prefix_length = MAX_COLLECTION_NAME_LENGTH - (HASH_LENGTH + SEPARATOR_LENGTH) - 1
     collection_prefix = cleaned_prefix_text.lower()[:max_prefix_length]
-    full_hash = hashlib.sha256(source.encode('utf-8')).hexdigest()
+    full_hash = hashlib.sha256(file_bytes).hexdigest()
     return f"{collection_prefix}_{full_hash[:HASH_LENGTH]}"

@@ -16,10 +16,8 @@ from pathlib import Path
 model = SentenceTransformer("all-MiniLM-L6-v2")
 tokenizer = model.tokenizer
 
-
-
 #TEST_DOCS_DIR = Path("data/test_docs")
-TEST_DOCS_DIR = Path(__file__).resolve().parent.parent / "data" / "test_docs"/"Renaissance_Notes.txt"
+TEST_DOCS_DIR = Path(__file__).resolve().parent.parent / "data" / "test_docs"/"Monarch_Butterfly_Migration.pdf"
 blocks = extract(str(TEST_DOCS_DIR))
 chunks = chunk_blocks(blocks,tokenizer)
 embedded_chunks = embed_chunks(chunks, model)
@@ -32,7 +30,7 @@ for chunk in embedded_chunks:
         print(f"MISSING: {chunk['chunk_id']} has no embedding at all")
 print("done checking for missing embeddings")
 print("all embeddings are 384-dim")
-print(f"query_chunks : {query_vector} , length :{len(query_vector)}" )
+#print(f"query_chunks : {query_vector} , length :{len(query_vector)}" )
 
 
 #first_chunk = embedded_chunks[0]

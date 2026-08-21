@@ -23,8 +23,8 @@ client = get_chroma_client()
 anthropic_client = anthropic.Anthropic()# or however you named it — loaded once, same principle
 
 TEST_DOCS_DIR = Path("data/test_docs")
-active_document_source = "Global_Coffee_Market_Report.pdf" 
-Query =  "Hakuna mata ta"
+active_document_source = "Monarch_Butterfly_Migration.pdf" 
+Query =  "what is the lifecycle of Monarch Butterfly"
 
 for file_path in sorted(TEST_DOCS_DIR.iterdir()):
     if (Path(file_path).name) == active_document_source:
